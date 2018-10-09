@@ -58,5 +58,11 @@ public class Pessoa {
 		this.telefone = telefone;
 	}
 	
-	
+	@Override
+	public String toString() {
+		return "Nome: " + getNome() + "\n"
+				+ "Sobrenome: " + getSobrenome() + "\n"
+				+ "Email: " + getEmail() + "\n"
+				+ "Telefone: " + getTelefone() + "\n";
+	}
 }

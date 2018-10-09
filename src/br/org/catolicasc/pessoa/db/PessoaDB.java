@@ -5,13 +5,15 @@ import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
 import br.org.catolicasc.pessoa.model.Pessoa;
 
 public class PessoaDB {
-	private static final String URL = "jdbc:sqlite:agenda";
+	private static final String URL = "jdbc:sqlite:agenda.db";
+	private static final String TABLE = "pessoa";
 	private Connection conn; // gerencia a conexã o
 	
 	private PreparedStatement selectTodasAsPessoas; 
@@ -21,6 +23,8 @@ public class PessoaDB {
 	public PessoaDB() {
 		try {
 			conn = DriverManager.getConnection(URL);
+			
+			createTable();
 			
 			selectTodasAsPessoas = conn.prepareStatement(
 					"SELECT * FROM pessoa");
@@ -38,6 +42,19 @@ public class PessoaDB {
 			e.printStackTrace();
 			System.exit(1);
 		}
+	}
+	
+	private void createTable() throws SQLException {
+	    String sqlCreate = "CREATE TABLE IF NOT EXISTS " + TABLE
+	            + "  (pessoaID           INTEGER,"
+	            + "   nome            VARCHAR(50),"
+	            + "   sobrenome          VARCHAR(255),"
+	            + "   email           VARCHAR(100),"
+	            + "   telefone           VARCHAR(20),"
+	            + "   PRIMARY KEY (pessoaID))";
+
+	    Statement stmt = conn.createStatement();
+	    stmt.execute(sqlCreate);
 	}
 	
 	private Pessoa getPessoaFromRs(ResultSet rs) throws SQLException {
