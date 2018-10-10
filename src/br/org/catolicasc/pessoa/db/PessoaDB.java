@@ -19,6 +19,9 @@ public class PessoaDB {
 	private PreparedStatement selectTodasAsPessoas; 
 	private PreparedStatement selectPessoasPorSobrenome;
 	private PreparedStatement insertNovaPessoa; 
+	private PreparedStatement updateEmailPessoaPorId;
+	private PreparedStatement updatePessoa;
+	private PreparedStatement deletePessoa;
 	
 	public PessoaDB() {
 		try {
@@ -35,7 +38,19 @@ public class PessoaDB {
 			insertNovaPessoa = conn.prepareStatement(
 					"INSERT INTO pessoa " +
 					"(nome, sobrenome, email, telefone) " +
-					"VALUES (?, ?, ?, ?)");
+					"VALUES (?, ?, ?, ?)", Statement.RETURN_GENERATED_KEYS);
+			
+			updateEmailPessoaPorId = conn.prepareStatement(
+					"UPDATE pessoa " +
+					"SET email = ? WHERE pessoaID = ?");
+			
+			updatePessoa = conn.prepareStatement(
+					"UPDATE pessoa " +
+					"SET nome = ?, sobrenome = ?, " +
+					"email = ?, telefone = ? WHERE pessoaID = ?");
+			
+			deletePessoa = conn.prepareStatement(
+					"DELETE FROM pessoa WHERE pessoaID = ?");
 			
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
@@ -67,19 +82,18 @@ public class PessoaDB {
 				);
 	}
 	
-	// obtém todas as pessoas
-	public List<Pessoa> getPessoas() {
+	private List<Pessoa> executaSelect(PreparedStatement stmt) {
 		List<Pessoa> resultado = null;
 		ResultSet rs = null;
 		
 		try {
-			rs = selectTodasAsPessoas.executeQuery();
+			rs = stmt.executeQuery();
 			resultado = new ArrayList<>();
 			
 			while (rs.next()) {
 				resultado.add(getPessoaFromRs(rs));
-			} 
-		} catch (SQLException e) {
+			}
+		}  catch (SQLException e) {
 			e.printStackTrace();
 		} finally {
 			try {
@@ -89,37 +103,80 @@ public class PessoaDB {
 				close();
 			}
 		}
+		
 		return resultado;
+	}
+	
+	// obtém todas as pessoas
+	public List<Pessoa> getPessoas() {
+		return executaSelect(selectTodasAsPessoas);		
 	}
 	
 	// obtém pessoa pelo sobreonome
 	public List<Pessoa> getPessoasPorSobrenome(String sobrenome) {
-		List<Pessoa> resultado = null;
-		ResultSet rs = null;
-		
 		try {
 			selectPessoasPorSobrenome.setString(1, sobrenome);
-		
-			rs = selectPessoasPorSobrenome.executeQuery();
-			resultado = new ArrayList<>();
-			while (rs.next()) {
-				resultado.add(getPessoaFromRs(rs));
-			} 
 		} catch (SQLException e) {
 			e.printStackTrace();
-		} finally {
-			try {
-				rs.close();
-			} catch (SQLException ex) {
-				ex.printStackTrace();
-				close();
-			}
 		}
+		
+		return executaSelect(selectPessoasPorSobrenome);
+	}
+	
+	public int updatePessoa(Pessoa p) {
+		int resultado = 0;
+		
+		try {
+			updatePessoa.setString(1, p.getNome());
+			updatePessoa.setString(2, p.getSobrenome());
+			updatePessoa.setString(3, p.getEmail());
+			updatePessoa.setString(4, p.getTelefone());
+			updatePessoa.setInt(5, p.getPessoaID());
+			
+			resultado = updatePessoa.executeUpdate();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+		}
+		
+		return resultado;
+	}
+	
+	public int deletePessoa(int id) {
+		int resultado = 0;
+		
+		try {
+			deletePessoa.setInt(1, id);
+			
+			resultado = deletePessoa.executeUpdate();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+		}
+		
+		return resultado;
+	}
+	
+	
+	public int updateEmailPessoaPorId(int id, String email) {
+		int resultado = 0;
+		
+		try {
+			updateEmailPessoaPorId.setString(1, email);
+			updateEmailPessoaPorId.setInt(2, id);
+			
+			resultado = updateEmailPessoaPorId.executeUpdate();
+		} catch (SQLException ex) {
+			ex.printStackTrace();
+		}
+		
 		return resultado;
 	}
 	
 	public int addPessoa(Pessoa p) {
-		return addPessoa(p.getNome(), p.getSobrenome(), p.getEmail(), p.getTelefone());
+		int id = addPessoa(p.getNome(), p.getSobrenome(), p.getEmail(), p.getTelefone());
+		
+		p.setPessoaID(id);
+		
+		return id;
 	}
 	
 	// adiciona uma pessoa
@@ -134,6 +191,10 @@ public class PessoaDB {
 			
 			// insere e retorna o numero de linhas atualizadas
 			resultado = insertNovaPessoa.executeUpdate();
+			
+			ResultSet rs = insertNovaPessoa.getGeneratedKeys();
+			if (rs.next())
+				resultado = rs.getInt(1);
 		} catch (SQLException ex) {
 			ex.printStackTrace();
 			close();
